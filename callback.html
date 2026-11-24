@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Toolbox Uploader · OAuth Callback</title>
+<meta name="description" content="OAuth sign-in callback endpoint for Toolbox Uploader.">
+<link rel="stylesheet" href="style.css">
+<style>
+.card{border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin:20px 0}
+.card h2{margin-top:0}
+.field-label{display:block;font-size:.85rem;color:var(--muted);margin:12px 0 4px}
+.readonly-input{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);font:13px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace}
+.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;align-items:center}
+button.btn{appearance:none;border:1px solid var(--line);background:var(--accent);color:#fff;padding:8px 14px;border-radius:6px;font:600 14px/1.2 inherit;cursor:pointer}
+button.btn.secondary{background:transparent;color:var(--fg)}
+.status-msg{font-size:.88rem;color:var(--muted)}
+.error-card{border-color:#c94a4a}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<main>
+<nav><a href="./">Home</a><a href="privacy.html">Privacy policy</a><a href="terms.html">Terms of service</a></nav>
+<h1>OAuth callback</h1>
+<p class="muted">Toolbox Uploader · local sign-in handoff</p>
+
+<section id="ready-card" class="card">
+<h2>Toolbox Uploader OAuth Callback — Ready</h2>
+<p>This static endpoint receives the OAuth authorization redirect for Toolbox Uploader and hands it off to your local desktop session. No data is sent to or stored on any remote server.</p>
+<p><a href="./">Return to Toolbox Uploader home</a></p>
+</section>
+
+<section id="error-card" class="card error-card hidden" role="alert">
+<h2>Sign-in error</h2>
+<p id="error-code" class="muted"></p>
+<p id="error-desc"></p>
+<p><a href="./">Return to Toolbox Uploader home</a></p>
+</section>
+
+<section id="code-card" class="card hidden">
+<h2>Completing sign-in with Toolbox Uploader...</h2>
+<p id="handoff-note" class="muted">If your local Toolbox Uploader server did not capture this automatically (or if you are using manual paste mode), copy the callback URL or authorization code below.</p>
+<label class="field-label" for="callback-url-input">Full callback URL</label>
+<input id="callback-url-input" class="readonly-input" type="text" readonly>
+<label class="field-label" for="auth-code-input">Authorization code</label>
+<input id="auth-code-input" class="readonly-input" type="text" readonly>
+<div class="actions">
+<button id="copy-url-btn" class="btn" type="button">Copy full callback URL</button>
+<button id="copy-code-btn" class="btn secondary" type="button">Copy code</button>
+<span id="copy-status" class="status-msg" aria-live="polite"></span>
+</div>
+</section>
+
+<footer>Toolbox Uploader · <a href="./">Home</a> · <a href="privacy.html">Privacy policy</a> · <a href="terms.html">Terms of service</a></footer>
+</main>
+<script>
+(function () {
+  var params = new URLSearchParams(window.location.search);
+  var code = params.get("code") || "";
+  var state = params.get("state") || "";
+  var scopes = params.get("scopes") || "";
+  var err = params.get("error") || "";
+  var errDesc = params.get("error_description") || "";
+
+  var readyCard = document.getElementById("ready-card");
+  var errorCard = document.getElementById("error-card");
+  var codeCard = document.getElementById("code-card");
+
+  if (err) {
+    readyCard.classList.add("hidden");
+    errorCard.classList.remove("hidden");
+    document.getElementById("error-code").textContent = "Error: " + err;
+    document.getElementById("error-desc").textContent = errDesc || "Authorization was cancelled or denied.";
+    return;
+  }
+
+  if (!code) {
+    return;
+  }
+
+  readyCard.classList.add("hidden");
+  codeCard.classList.remove("hidden");
+
+  var urlInput = document.getElementById("callback-url-input");
+  var codeInput = document.getElementById("auth-code-input");
+  var copyStatus = document.getElementById("copy-status");
+  urlInput.value = window.location.href;
+  codeInput.value = code;
+
+  function copyValue(inputEl, label) {
+    inputEl.focus();
+    inputEl.select();
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(inputEl.value).then(function () {
+        copyStatus.textContent = label + " copied.";
+      }, function () {
+        document.execCommand("copy");
+        copyStatus.textContent = label + " copied.";
+      });
+    } else {
+      document.execCommand("copy");
+      copyStatus.textContent = label + " copied.";
+    }
+  }
+
+  document.getElementById("copy-url-btn").addEventListener("click", function () {
+    copyValue(urlInput, "Callback URL");
+  });
+  document.getElementById("copy-code-btn").addEventListener("click", function () {
+    copyValue(codeInput, "Code");
+  });
+
+  if (scopes) {
+    document.getElementById("handoff-note").setAttribute("data-scopes", scopes);
+  }
+
+  var target = null;
+  if (/^p5190_[A-Za-z0-9_-]{8,128}$/.test(state)) {
+    target = "http://localhost:5190/api/studios/7641-problems/x/tiktok/callback" + window.location.search;
+  } else if (/^p8766_[A-Za-z0-9_-]{8,128}$/.test(state)) {
+    target = "http://127.0.0.1:8766/callback/" + window.location.search;
+  }
+
+  if (target) {
+    window.setTimeout(function () {
+      window.location.replace(target);
+    }, 50);
+  }
+})();
+</script>
+</body>
+</html>
